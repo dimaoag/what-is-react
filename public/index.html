@@ -72,12 +72,13 @@
     subscribe (channel, listener) {
       const match = /price-(\d+)/.exec(channel)
       if (match) {
-        setInterval(() => {
+        const interval = setInterval(() => {
           listener({
             id: parseInt(match[1]),
             price: Math.round((Math.random() * 10 + 30))
           })
         }, 400)
+        return () => clearInterval(interval)
       }
     }
   }
@@ -304,15 +305,9 @@
 
   const lotsMapDispatchToProps = {
     load: () => {
-      return (dispatch, getState, { api, stream }) => {
+      return (dispatch, getState, { api }) => {
         api.get('/lots').then((lots) => {
           dispatch(setLots(lots))
-
-          lots.forEach((lot) => {
-            stream.subscribe(`price-${lot.id}`, (data) => {
-              dispatch(changeLotPrice(data.id, data.price))
-            })
-          })
         })
       }
     }
@@ -320,7 +315,11 @@
 
   const LotsConnected = ReactRedux.connect(lotsMapStateToProps, lotsMapDispatchToProps)(Lots)
 
-  function Lot ({ lot, favorite, unfavorite }) {
+  function Lot ({ lot, subscribe, favorite, unfavorite }) {
+    React.useEffect(() => {
+      return subscribe(lot.id)
+    }, [lot.id])
+
     return (
       <article className={'lot' + (lot.favorite ? ' favorite' : '')}>
         <div className="price">{lot.price}</div>
@@ -336,6 +335,13 @@
   }
 
   const lotMapDispatchToProps = {
+    subscribe: (id) => {
+      return (dispatch, getState, { stream }) => {
+        return stream.subscribe(`price-${id}`, (data) => {
+          dispatch(changeLotPrice(data.id, data.price))
+        })
+      }
+    },
     favorite: favoriteLotAsync,
     unfavorite: unfavoriteLotAsync
   }
