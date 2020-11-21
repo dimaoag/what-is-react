@@ -195,7 +195,7 @@
 
   const store = Redux.createStore(
     Redux.combineReducers({ auction: auctionReducer }),
-    Redux.applyMiddleware(thunk.withExtraArgument({ api }))
+    Redux.applyMiddleware(thunk.withExtraArgument({ api, stream }))
   )
 
   // ##########################
@@ -279,8 +279,14 @@
     return <div className="loading">Loading...</div>
   }
 
-  function Lots ({ lots }) {
-    if (lots === null) {
+  function Lots ({ lots, loaded, load }) {
+    React.useEffect(() => {
+      if (!loaded) {
+        load()
+      }
+    }, [loaded])
+
+    if (!loaded) {
       return <Loading />
     }
 
@@ -292,10 +298,27 @@
   }
 
   const lotsMapStateToProps = (state) => ({
-    lots: state.auction.lots
+    lots: state.auction.lots,
+    loaded: state.auction.lots !== null
   })
 
-  const LotsConnected = ReactRedux.connect(lotsMapStateToProps)(Lots)
+  const lotsMapDispatchToProps = {
+    load: () => {
+      return (dispatch, getState, { api, stream }) => {
+        api.get('/lots').then((lots) => {
+          dispatch(setLots(lots))
+
+          lots.forEach((lot) => {
+            stream.subscribe(`price-${lot.id}`, (data) => {
+              dispatch(changeLotPrice(data.id, data.price))
+            })
+          })
+        })
+      }
+    }
+  }
+
+  const LotsConnected = ReactRedux.connect(lotsMapStateToProps, lotsMapDispatchToProps)(Lots)
 
   function Lot ({ lot, favorite, unfavorite }) {
     return (
@@ -339,20 +362,6 @@
     </ReactRedux.Provider>,
     document.getElementById('root')
   )
-
-  // ##########################
-
-  api.get('/lots').then((lots) => {
-    store.dispatch(setLots(lots))
-
-    lots.forEach((lot) => {
-      stream.subscribe(`price-${lot.id}`, (data) => {
-        store.dispatch(changeLotPrice(data.id, data.price))
-      })
-    })
-  })
-
-  // ##########################
 
 </script>
 
