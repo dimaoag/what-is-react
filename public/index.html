@@ -10,7 +10,7 @@
   <script src="https://unpkg.com/redux@4/dist/redux.js" crossorigin></script>
   <script src="https://unpkg.com/react-redux@7/dist/react-redux.js" crossorigin></script>
   <script src="https://unpkg.com/redux-thunk@2/dist/redux-thunk.js" crossorigin></script>
-  <script src="https://unpkg.com/babel-standalone@6/babel.js" crossorigin></script>
+  <script src="https://unpkg.com/@babel/standalone@7.12.6/babel.js" crossorigin></script>
   <script src="https://unpkg.com/ionicons@5/dist/ionicons/ionicons.esm.js" type="module" crossorigin></script>
 </head>
 <body>
@@ -205,6 +205,7 @@
       <div className="app">
         <Header />
         <ClockContainer />
+        <ClockContainer2 />
         <LotsConnected />
       </div>
     )
@@ -248,6 +249,19 @@
     render () {
       return <Clock time={this.state.time} />
     }
+  }
+
+  function ClockContainer2 () {
+    const [time, setTime] = React.useState(new Date())
+
+    React.useEffect(() => {
+      const interval = setInterval(() => {
+        setTime(new Date())
+      }, 1000)
+      return () => clearInterval(interval)
+    }, [setTime])
+
+    return <Clock time={time} />
   }
 
   function Clock ({ time }) {
