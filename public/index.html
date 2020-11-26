@@ -48,7 +48,7 @@
                 reject(new Error('Connection error'))
               }
 
-            }, 1000)
+            }, 200)
           })
         default:
           throw new Error('Unknown address')
@@ -97,6 +97,7 @@
     error: null
   }
 
+  const LOTS_CLEAR = 'LOTS_CLEAR'
   const LOTS_LOADING_PENDING = 'LOTS_LOADING_PENDING'
   const LOTS_LOADING_SUCCESS = 'LOTS_LOADING_SUCCESS'
   const LOTS_LOADING_ERROR = 'LOTS_LOADING_ERROR'
@@ -106,6 +107,14 @@
 
   function auctionReducer (state = auctionInitialState, action) {
     switch (action.type) {
+      case LOTS_CLEAR:
+        return {
+          ...state,
+          lots: [],
+          loading: false,
+          loaded: false,
+          error: null
+        }
       case LOTS_LOADING_PENDING:
         return {
           ...state,
@@ -171,6 +180,12 @@
         }
       default:
         return state
+    }
+  }
+
+  function lotsClear () {
+    return {
+      type: LOTS_CLEAR
     }
   }
 
@@ -503,19 +518,32 @@
     return <div className="loading">Loading...</div>
   }
 
-  function AlertError ({ message }) {
-    return <div className="error">{message}</div>
+  function AlertError ({ message, retry }) {
+    return (
+      <div className="error">
+        <span>{message}</span>
+        {retry ? (
+          <ion-icon name="reload-circle" onClick={retry} />
+        ) : null}
+      </div>
+    )
   }
 
-  function LotsContainer ({ lots, loading, loaded, error, load }) {
+  function LotsContainer ({ lots, loading, loaded, error, load, unload }) {
     React.useEffect(() => {
       if (!loaded && !loading && error === null) {
         load()
       }
     }, [loaded, loading, error])
 
+    React.useEffect(() => {
+      if (loaded || error !== null) {
+        return unload
+      }
+    }, [loaded, error])
+
     if (error !== null) {
-      return <AlertError message={error} />
+      return <AlertError message={error} retry={load} />
     }
 
     if (loading) {
@@ -537,7 +565,8 @@
   })
 
   const lotsContainerMapDispatchToProps = {
-    load: loadLotsAsync
+    load: loadLotsAsync,
+    unload: lotsClear
   }
 
   const LotsContainerConnected = ReactRedux.connect(
